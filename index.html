@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Document</title>
+</head>
+
+<body>
+    <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+			{
+				"imports": {
+					"three": "https://unpkg.com/three/build/three.module.js"
+				}
+			}
+		</script>
+
+    <script type="module">
+
+        import * as THREE from 'three';
+
+        import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+        import { GLTFLoader } from 'https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js';
+
+        import { KTX2Loader } from 'https://unpkg.com/three/examples/jsm/loaders/KTX2Loader.js';
+        import { MeshoptDecoder } from 'https://unpkg.com/three/examples/jsm/libs/meshopt_decoder.module.js';
+        import { VRButton } from 'https://unpkg.com/three/examples/jsm/webxr/VRButton.js';
+        
+        let controls;
+
+        var scene = new THREE.Scene();
+
+        //cubemap
+        const path = 'cubeMap/';
+        const format = '.jpg';
+        const urls = [
+            path + 'px' + format, path + 'nx' + format,
+            path + 'py' + format, path + 'ny' + format,
+            path + 'pz' + format, path + 'nz' + format
+        ];
+
+        const reflectionCube = new THREE.CubeTextureLoader().load(urls);
+
+        //refractionCube.mapping = THREE.CubeRefractionMapping;
+
+        scene.background = reflectionCube;
+
+
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        document.body.appendChild( VRButton.createButton( renderer ) );
+
+        //var geometry = new THREE.BoxGeometry(1, 1, 1);
+        var geometry = new THREE.SphereGeometry(3, 36, 16);
+        var geometryBigger = new THREE.SphereGeometry(3.02, 36, 16);
+
+        const loader = new THREE.TextureLoader();
+        const texture = new THREE.TextureLoader().load('EarthMaterials/earth_atmos_2048.jpeg');
+        const bumpMap = new THREE.TextureLoader().load('EarthMaterials/earth_bump.jpeg');
+        const specularMap = new THREE.TextureLoader().load('EarthMaterials\earth_specular_2048.jpeg');
+        const normalMap = new THREE.TextureLoader().load('EarthMaterials/earth_normal_2048.jpeg');
+
+        const material = new THREE.MeshPhongMaterial({
+            map: texture,
+            specularMap: specularMap,
+            normalMap: normalMap,
+            side: THREE.DoubleSide,
+            bumpMap: bumpMap,
+            bumpScale: 0.3,
+            envMap: reflectionCube
+        });
+
+        var cube = new THREE.Mesh(geometry, material);
+        cube.position.set(30, 10, -50);
+        scene.add(cube);
+
+        const textureCloud = new THREE.TextureLoader().load('EarthMaterials/earth_clouds_2048.png');
+        const cloudsTransparent = new THREE.TextureLoader().load('EarthMaterials/earthcloudmaptrans.jpeg');
+
+        const materialCloud = new THREE.MeshBasicMaterial({
+            map: textureCloud,
+            transparent: true,
+            alphaMap: cloudsTransparent
+        });
+
+        //var material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+
+        var clouds = new THREE.Mesh(geometryBigger, materialCloud);
+        clouds.position.set(30, 10, -50);
+        scene.add(clouds);
+
+        camera.position.z = 5;
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.listenToKeyEvents(window); // optional
+
+        //controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+
+        controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+        controls.dampingFactor = 0.05;
+
+        controls.screenSpacePanning = false;
+
+        controls.minDistance = 1;
+        controls.maxDistance = 10;
+
+        controls.maxPolarAngle = Math.PI / 2;
+
+        camera.position.set(1, 3, 6);
+
+        var light = new THREE.DirectionalLight(0xdddddd, 0.8);
+        //light.target.position = 160;
+        light.position.set(6, 6, 6);
+        scene.add(light);
+
+        var lightAmb = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(lightAmb);
+
+        const lightHem = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+        scene.add(lightHem);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        //renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	    //renderer.toneMappingExposure = 1;
+
+        const ktx2Loader = new KTX2Loader()
+            .setTranscoderPath('js/libs/basis/')
+            .detectSupport(renderer);
+
+        const loaderObject = new GLTFLoader().setPath('models/');
+        loaderObject.setKTX2Loader(ktx2Loader);
+        loaderObject.setMeshoptDecoder(MeshoptDecoder);
+        loaderObject.load('kissa.glb', function (gltf) {
+
+            // coffeemat.glb was produced from the source scene using gltfpack:
+            // gltfpack -i coffeemat/scene.gltf -o coffeemat.glb -cc -tc
+            // The resulting model uses EXT_meshopt_compression (for geometry) and KHR_texture_basisu (for texture compression using ETC1S/BasisLZ)
+
+            gltf.scene.position.y = -100;
+            gltf.scene.position.x = -200;
+            gltf.scene.position.z = -300;
+            gltf.scene.scale.set(0.3, 0.3, 0.3);
+            scene.add(gltf.scene);
+
+        });
+
+        window.addEventListener('resize', onWindowResize, false);
+
+
+        /*
+        var animate = function () {
+            requestAnimationFrame(animate);
+
+            cube.rotation.y += 0.001;
+
+            clouds.rotation.y += 0.002;
+
+            controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+
+            renderer.render(scene, camera);
+        };
+
+        animate();*/
+
+        renderer.setAnimationLoop( function () {
+            cube.rotation.y += 0.001;
+
+            clouds.rotation.y += 0.002;
+
+            controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+
+            renderer.render(scene, camera);
+
+        } );
+
+    </script>
+
+</body>
+
+</html>
