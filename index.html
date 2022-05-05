@@ -167,7 +167,7 @@
 
         /********************************** Create floor **********************************/
 
-        const textureFloor = new THREE.TextureLoader().load('/textures/fabric.jpg');
+        const textureFloor = new THREE.TextureLoader().load('textures/fabric.jpg');
         const geometryFloor = new THREE.PlaneGeometry(30, 30);
         const materialFloor = new THREE.MeshPhongMaterial({
             map: textureFloor,
@@ -222,16 +222,6 @@
         controls.maxPolarAngle = Math.PI / 2;
 
         camera.position.set(1, 3, 6);
-
-        /************************************ Window resize **********************************/
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        window.addEventListener('resize', onWindowResize, false);
 
         /************************************ Initialize XR **********************************/
 
@@ -427,8 +417,18 @@
             renderer.render(scene, camera);
         });
 
+        /************************************ Window resize **********************************/
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.addEventListener('resize', onWindowResize, false);
+
     </script>
-    
+
 </body>
 
 </html>
